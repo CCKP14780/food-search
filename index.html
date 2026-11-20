@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Food Facts & QR Scanner</title>
+  <!-- Load HTML5 QR Code Scanner Library from CDN -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #18202c;
+      --muted: #5c6778;
+      --border: #dfe4ec;
+      --accent: #1b6ca8;
+      --accent-hover: #145483;
+      --scan-btn: #027a48;
+      --scan-btn-hover: #02633a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 0.4rem;
+      font-size: 1.6rem;
+    }
+    .subtitle {
+      margin: 0 0 1.5rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .search-box {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      background: var(--card);
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    input[type="text"] {
+      flex: 1 1 220px;
+      padding: 0.65rem 0.8rem;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+    }
+    button {
+      padding: 0.65rem 1.1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 7px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.scan-trigger {
+      background: var(--scan-btn);
+    }
+    button.scan-trigger:hover {
+      background: var(--scan-btn-hover);
+    }
+    button.secondary {
+      background: #eef2f6;
+      color: var(--text);
+      font-weight: 500;
+    }
+    button.secondary:hover { background: #e1e7ee; }
+    
+    /* Scanner container styles */
+    #scanner-container {
+      margin-top: 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      display: none;
+      text-align: center;
+    }
+    #reader {
+      width: 100%;
+      max-width: 450px;
+      margin: 0 auto;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .samples {
+      margin-top: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .status {
+      margin-top: 1rem;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+    .error { color: #b42318; font-weight: 600; }
+    
+    .result-card {
+      margin-top: 1.25rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      display: none;
+    }
+    .product-header {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .product-header img {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #fafafa;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: #e7f2fa;
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.92rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.5rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    details {
+      margin-top: 1rem;
+    }
+    pre {
+      background: #10151d;
+      color: #e6edf3;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      max-height: 320px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Food Facts & QR Scanner</h1>
+    <p class="subtitle">Fetch nutrition and metadata by barcode, or scan QR code/barcodes using your camera.</p>
+
+    <!-- Unified Form and Scanner Button -->
+    <form class="search-box" id="lookupForm">
+      <input
+        id="barcodeInput"
+        type="text"
+        value="3017624010701"
+        placeholder="Enter barcode"
+        required
+      />
+      <button type="submit">Fetch Food</button>
+      <button type="button" id="toggleScannerBtn" class="scan-trigger">Scan QR / Barcode</button>
+    </form>
+
+    <!-- Camera scanning viewport -->
+    <div id="scanner-container">
+      <h3 style="margin-top: 0;">Scan Area</h3>
+      <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.75rem;">
+        Hold a QR code or barcode up to your camera. Click 'Stop Scan' when done.
+      </p>
+      <div id="reader"></div>
+      <button type="button" id="stopScanBtn" class="secondary" style="margin-top: 0.75rem;">Stop Scanner</button>
+    </div>
+
+    <div class="samples">
+      <span>Sample:</span>
+      <button type="button" class="secondary" data-code="3017624010701">Nutella (3017624010701)</button>
+      <button type="button" class="secondary" data-code="3274080005003">Cristaline Water (3274080005003)</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <!-- Product Info Panel -->
+    <div class="result-card" id="resultCard">
+      <div class="product-header">
+        <img id="productImg" alt="Product image" />
+        <div>
+          <span class="badge" id="nutriScore">Nutri-Score: ?</span>
+          <h2 id="productName" style="margin: 0.4rem 0 0.25rem;"></h2>
+          <div id="brands" style="color: var(--muted); font-size: 0.92rem;"></div>
+        </div>
+      </div>
+
+      <p id="ingredients" style="margin-top: 1rem; font-size: 0.92rem;"></p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Nutrient (per 100g)</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody id="nutrientsBody"></tbody>
+      </table>
+
+      <details>
+        <summary style="cursor: pointer; font-weight: 600;">View Raw JSON Response</summary>
+        <pre id="rawJson"></pre>
+      </details>
+    </div>
+  </div>
+
+  <script>
+    const FIELDS = [
+      "product_name",
+      "brands",
+      "nutrition_grades",
+      "ingredients_text",
+      "image_front_small_url",
+      "nutriments"
+    ].join(",");
+
+    const form = document.getElementById("lookupForm");
+    const input = document.getElementById("barcodeInput");
+    const statusEl = document.getElementById("status");
+    const cardEl = document.getElementById("resultCard");
+    
+    // Scanner UI Control
+    const toggleScannerBtn = document.getElementById("toggleScannerBtn");
+    const stopScanBtn = document.getElementById("stopScanBtn");
+    const scannerContainer = document.getElementById("scanner-container");
+    
+    let html5QrcodeScanner = null;
+
+    // Smart Barcode/QR Extractor (handles URLs too)
+    function extractBarcode(text) {
+      // Look for a sequences of digits (typical barcodes are 8, 12, or 13 digits)
+      const match = text.match(/\d{8,13}/);
+      if (match) {
+        return match[0];
+      }
+      
+      // Look if it's an Open Food Facts URL (e.g. world.openfoodfacts.org/product/12345678)
+      const urlMatch = text.match(/\/product\/(\d+)/);
+      if (urlMatch) {
+        return urlMatch[1];
+      }
+
+      // Return raw string if no numbers could be smartly extracted, as fallsafe
+      return text.trim();
+    }
+
+    // Toggle camera scanning
+    toggleScannerBtn.addEventListener("click", () => {
+      if (scannerContainer.style.display === "none" || scannerContainer.style.display === "") {
+        startScanner();
+      } else {
+        stopScanner();
+      }
+    });
+
+    stopScanBtn.addEventListener("click", stopScanner);
+
+    function startScanner() {
+      scannerContainer.style.display = "block";
+      toggleScannerBtn.textContent = "Closing Camera...";
+      toggleScannerBtn.disabled = true;
+
+      // Initialize scanner object with video bounds
+      html5QrcodeScanner = new Html5Qrcode("reader");
+      
+      const config = { 
+        fps: 10, 
+        qrbox: (width, height) => {
+          // Adjust camera scanning viewport box based on resolution
+          return {
+            width: Math.min(width * 0.75, 300),
+            height: Math.min(height * 0.75, 300)
+          };
+        }
+      };
+
+      // Start camera back/rear capture
+      html5QrcodeScanner.start(
+        { facingMode: "environment" }, 
+        config,
+        (decodedText) => {
+          // Success Callback
+          const barcode = extractBarcode(decodedText);
+          input.value = barcode;
+          stopScanner();
+          fetchFood(barcode);
+        },
+        (errorMessage) => {
+          // Verbose error callbacks are triggered on every camera scan iteration with nothing seen.
+          // Keep this empty to avoid UI spam unless debugging.
+        }
+      ).then(() => {
+        toggleScannerBtn.textContent = "Scanner Active";
+        toggleScannerBtn.disabled = false;
+      }).catch(err => {
+        console.error("Camera access failed", err);
+        statusEl.className = "status error";
+        statusEl.textContent = "Camera access denied or failed: Please verify HTTPS and camera permissions.";
+        stopScanner();
+      });
+    }
+
+    function stopScanner() {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+          html5QrcodeScanner = null;
+        }).catch(err => console.error("Error stopping scanning", err));
+      }
+      scannerContainer.style.display = "none";
+      toggleScannerBtn.textContent = "Scan QR / Barcode";
+      toggleScannerBtn.disabled = false;
+    }
+
+    // Quick-load demo dataset buttons
+    document.querySelectorAll("[data-code]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        input.value = btn.dataset.code;
+        fetchFood(btn.dataset.code);
+      });
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      fetchFood(input.value.trim());
+    });
+
+    async function fetchFood(barcode) {
+      if (!barcode) return;
+
+      statusEl.className = "status";
+      statusEl.textContent = "Fetching product data...";
+      cardEl.style.display = "none";
+
+      const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${FIELDS}`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} (${res.statusText})`);
+        }
+
+        const data = await res.json();
+        if (data.status !== 1 || !data.product) {
+          statusEl.className = "status error";
+          statusEl.textContent = `Product not found for "${barcode}". Ensure code is correct and verify format.`;
+          return;
+        }
+
+        renderProduct(barcode, data.product, data);
+        statusEl.textContent = `Loaded product for barcode ${barcode}.`;
+      } catch (err) {
+        statusEl.className = "status error";
+        statusEl.textContent = `Failed to fetch data: ${err.message}`;
+      }
+    }
+
+    function renderProduct(barcode, product, fullData) {
+      const n = product.nutriments || {};
+      const imgEl = document.getElementById("productImg");
+
+      document.getElementById("productName").textContent =
+        product.product_name || "Unnamed Product";
+      document.getElementById("brands").textContent =
+        product.brands ? `Brand: ${product.brands}` : "Brand not listed";
+      document.getElementById("nutriScore").textContent =
+        `Nutri-Score: ${(product.nutrition_grades || "n/a").toUpperCase()}`;
+      document.getElementById("ingredients").textContent =
+        product.ingredients_text
+          ? `Ingredients: ${product.ingredients_text}`
+          : "Ingredients not listed.";
+
+      if (product.image_front_small_url) {
+        imgEl.src = product.image_front_small_url;
+        imgEl.style.display = "block";
+      } else {
+        imgEl.style.display = "none";
+      }
+
+      const rows = [
+        ["Energy (kcal)", n["energy-kcal_100g"] != null ? `${n["energy-kcal_100g"]} kcal` : "—"],
+        ["Fat", n.fat_100g != null ? `${n.fat_100g} g` : "—"],
+        ["Saturated Fat", n["saturated-fat_100g"] != null ? `${n["saturated-fat_100g"]} g` : "—"],
+        ["Carbohydrates", n.carbohydrates_100g != null ? `${n.carbohydrates_100g} g` : "—"],
+        ["Sugars", n.sugars_100g != null ? `${n.sugars_100g} g` : "—"],
+        ["Fiber", n.fiber_100g != null ? `${n.fiber_100g} g` : "—"],
+        ["Protein", n.proteins_100g != null ? `${n.proteins_100g} g` : "—"],
+        ["Salt", n.salt_100g != null ? `${n.salt_100g} g` : "—"]
+      ];
+
+      document.getElementById("nutrientsBody").innerHTML = rows
+        .map(([label, val]) => `<tr><td>${label}</td><td>${val}</td></tr>`)
+        .join("");
+
+      document.getElementById("rawJson").textContent = JSON.stringify(fullData, null, 2);
+      cardEl.style.display = "block";
+    }
+
+    // Load initial example on page load
+    fetchFood(input.value.trim());
+  </script>
+</body>
+</html>
